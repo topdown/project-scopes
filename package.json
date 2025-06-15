@@ -1,6 +1,6 @@
 {
-  "name": "project-scopes",
-  "displayName": "Project Scopes",
+  "name": "simple-scopes",
+  "displayName": "Simple Scopes",
   "description": "Project scopes is a filter to focus on specific sections (directories) within your project",
   "version": "0.0.2",
   "publisher": "DevShedLabs",

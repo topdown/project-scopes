@@ -1,4 +1,4 @@
-# Project Scopes for VS Code
+# Simple Scopes for VS Code
 
 A VS Code extension that allows you to define and switch between different folder scopes within your project, similar to JetBrains IDEs.
 
@@ -6,7 +6,7 @@ A VS Code extension that allows you to define and switch between different folde
 
 - **Create Named Scopes**: Define custom scopes that include specific folders from your project
 - **Quick Scope Switching**: Easily switch between different scopes using the command palette or status bar
-- **Visual Indicators**: See which scope is currently active in the status bar and Project Scopes panel
+- **Visual Indicators**: See which scope is currently active in the status bar and Simple Scopes panel
 - **Scope Management**: Edit scope names, descriptions, and folder selections
 - **Persistent Settings**: Scopes are saved in your workspace settings
 
@@ -33,22 +33,22 @@ A VS Code extension that allows you to define and switch between different folde
 - Run the command `Switch Scope`
 - Select a scope from the list
 
-**Method 3: Project Scopes Panel**
+**Method 3: Simple Scopes Panel**
 
-- In the Explorer sidebar, find the "Project Scopes" panel
+- In the Explorer sidebar, find the "Simple Scopes" panel
 - Click on any scope to activate it
 
 ### Managing Scopes
 
 **Edit a Scope:**
 
-- Right-click on a scope in the Project Scopes panel
+- Right-click on a scope in the Simple Scopes panel
 - Choose "Edit Scope"
 - Select what you want to edit (name, folders, or description)
 
 **Delete a Scope:**
 
-- Right-click on a scope in the Project Scopes panel
+- Right-click on a scope in the Simple Scopes panel
 - Choose "Delete Scope"
 - Confirm the deletion
 
@@ -63,7 +63,7 @@ A VS Code extension that allows you to define and switch between different folde
 
 Shows the currently active scope in the bottom-left corner. Click to quickly switch scopes.
 
-### Project Scopes Panel
+### Simple Scopes Panel
 
 Located in the Explorer sidebar, this panel shows:
 
@@ -116,7 +116,7 @@ Scopes are stored in your workspace settings under:
 1. Clone this repository
 2. Run `npm install` to install dependencies
 3. Press `F5` to launch a new VS Code window with the extension loaded
-4. Open a project folder to start using Project Scopes
+4. Open a project folder to start using Simple Scopes
 
 ## Requirements
 
