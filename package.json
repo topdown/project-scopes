@@ -2,7 +2,7 @@
   "name": "project-scopes",
   "displayName": "Project Scopes",
   "description": "Project scopes is a filter to focus on specific sections (directories) within your project",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "DevShedLabs",
   "icon": "icon.png",
   "license": "MIT",
@@ -17,7 +17,11 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "onView:projectScopes",
+    "onView:scopedFileExplorer",
+    "onCommand:project-scopes.createScope",
+    "onCommand:project-scopes.switchScope",
+    "onStartupFinished"
   ],
   "main": "./extension.js",
   "contributes": {
