@@ -51,6 +51,11 @@
         "command": "project-scopes.refreshScopes",
         "title": "Refresh Scopes",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "project-scopes.debugScope",
+        "title": "Debug Current Scope",
+        "icon": "$(bug)"
       }
     ],
     "views": {
