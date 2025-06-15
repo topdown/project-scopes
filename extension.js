@@ -79,7 +79,7 @@ class ScopeManager {
     this.activeScope = this.workspaceConfig.get("activeScope", "");
     this.scopes = this.workspaceConfig.get("scopes", {});
     this.statusBarItem = null;
-    this.fileExplorerDecorationProvider = null;
+    this.originalFilesExclude = undefined;
 
     // Initialize status bar
     this.initializeStatusBar();
@@ -477,17 +477,145 @@ class ScopeManager {
     return folders;
   }
 
-  updateFileExplorerVisibility() {
-    // This would require a more complex implementation using file decorations
-    // For now, we'll just show a notification about the active scope
+  async updateFileExplorerVisibility() {
     if (this.activeScope && this.scopes[this.activeScope]) {
-      const folders = this.scopes[this.activeScope].folders;
+      // Active scope - apply file exclusion filter to built-in explorer
+      await this.applyScopeFilter();
+    } else {
+      // No active scope - remove filters from built-in explorer
+      await this.clearScopeFilter();
+    }
+  }
+
+  async applyScopeFilter() {
+    const scopeFolders = this.scopes[this.activeScope].folders;
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+
+    if (!workspaceFolders || scopeFolders.length === 0) return;
+
+    // Store original files.exclude setting if not already stored
+    if (this.originalFilesExclude === undefined) {
+      const config = vscode.workspace.getConfiguration("files");
+      this.originalFilesExclude = config.get("exclude") || {};
+      console.log("Stored original files.exclude:", this.originalFilesExclude);
+    }
+
+    // Create exclusion patterns for everything except scoped folders
+    const excludePatterns = { ...this.originalFilesExclude };
+
+    // Get all top-level directories in workspace
+    for (const workspaceFolder of workspaceFolders) {
+      try {
+        const entries = await fs.promises.readdir(workspaceFolder.uri.fsPath, {
+          withFileTypes: true,
+        });
+
+        console.log(`Found ${entries.length} entries in workspace folder`);
+
+        for (const entry of entries) {
+          if (entry.isDirectory() && !entry.name.startsWith(".")) {
+            const shouldExclude = !this.isFolderInScope(
+              entry.name,
+              scopeFolders
+            );
+
+            console.log(
+              `Directory "${entry.name}": ${
+                shouldExclude ? "EXCLUDING" : "INCLUDING"
+              }`
+            );
+
+            if (shouldExclude) {
+              excludePatterns[entry.name] = true;
+            } else {
+              // Make sure scoped folders are not excluded (remove any existing exclusion)
+              delete excludePatterns[entry.name];
+            }
+          }
+        }
+      } catch (error) {
+        console.log(`Error reading workspace folder: ${error.message}`);
+      }
+    }
+
+    console.log("Final exclude patterns:", excludePatterns);
+
+    // Apply the exclusion patterns
+    await vscode.workspace
+      .getConfiguration("files")
+      .update("exclude", excludePatterns, vscode.ConfigurationTarget.Workspace);
+
+    // Force refresh of the file explorer
+    try {
+      await vscode.commands.executeCommand(
+        "workbench.files.action.refreshFilesExplorer"
+      );
+    } catch (error) {
+      console.log("Failed to refresh files explorer:", error);
+    }
+
+    console.log(
+      `Applied scope filter for "${this.activeScope}": showing ${scopeFolders.length} folders`
+    );
+    vscode.window.showInformationMessage(
+      `Scope "${this.activeScope}" active - showing only: ${scopeFolders.join(
+        ", "
+      )}`
+    );
+  }
+
+  async clearScopeFilter() {
+    if (this.originalFilesExclude !== undefined) {
       console.log(
-        `Active scope "${this.activeScope}" includes folders: ${folders.join(
-          ", "
-        )}`
+        "Restoring original files.exclude:",
+        this.originalFilesExclude
+      );
+
+      // Restore original files.exclude setting
+      await vscode.workspace
+        .getConfiguration("files")
+        .update(
+          "exclude",
+          this.originalFilesExclude,
+          vscode.ConfigurationTarget.Workspace
+        );
+
+      this.originalFilesExclude = undefined;
+
+      // Force refresh of the file explorer
+      try {
+        await vscode.commands.executeCommand(
+          "workbench.files.action.refreshFilesExplorer"
+        );
+      } catch (error) {
+        console.log("Failed to refresh files explorer:", error);
+      }
+
+      console.log("Cleared scope filter: restored original file visibility");
+      vscode.window.showInformationMessage(
+        "Scope cleared - showing all folders"
       );
     }
+  }
+
+  isFolderInScope(folderName, scopeFolders) {
+    return scopeFolders.some((scopeFolder) => {
+      // Normalize paths
+      const normalizedScopeFolder = scopeFolder.replace(/\\/g, "/");
+      const scopeParts = normalizedScopeFolder
+        .split("/")
+        .filter((part) => part.length > 0);
+
+      // Check if this folder is the first part of any scope folder path
+      // or if the scope folder exactly matches this folder
+      const isMatch =
+        scopeParts[0] === folderName || normalizedScopeFolder === folderName;
+
+      console.log(
+        `  Checking "${folderName}" against scope "${scopeFolder}": ${isMatch}`
+      );
+      return isMatch;
+    });
   }
 
   validateScopes() {

@@ -3,7 +3,9 @@
   "displayName": "Project Scopes",
   "description": "Project scopes is a filter to focus on specific sections (directories) within your project",
   "version": "0.0.1",
-  "publisher": "yourname",
+  "publisher": "DevShedLabs",
+  "icon": "icon.png",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/topdown/project-scopes"
