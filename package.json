@@ -64,6 +64,11 @@
           "id": "projectScopes",
           "name": "Project Scopes",
           "when": "workspaceFolderCount > 0"
+        },
+        {
+          "id": "scopedFileExplorer",
+          "name": "Scoped Files",
+          "when": "workspaceFolderCount > 0"
         }
       ]
     },
