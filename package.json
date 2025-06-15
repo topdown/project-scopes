@@ -17,7 +17,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "*"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -62,13 +62,11 @@
       "explorer": [
         {
           "id": "projectScopes",
-          "name": "Project Scopes",
-          "when": "workspaceFolderCount > 0"
+          "name": "Project Scopes"
         },
         {
           "id": "scopedFileExplorer",
-          "name": "Scoped Files",
-          "when": "workspaceFolderCount > 0"
+          "name": "Scoped Files"
         }
       ]
     },
@@ -104,16 +102,13 @@
       ],
       "commandPalette": [
         {
-          "command": "project-scopes.createScope",
-          "when": "workspaceFolderCount > 0"
+          "command": "project-scopes.createScope"
         },
         {
-          "command": "project-scopes.switchScope",
-          "when": "workspaceFolderCount > 0"
+          "command": "project-scopes.switchScope"
         },
         {
-          "command": "project-scopes.clearScope",
-          "when": "workspaceFolderCount > 0"
+          "command": "project-scopes.clearScope"
         }
       ]
     },

@@ -3,7 +3,6 @@
 const vscode = require("vscode");
 const path = require("path");
 const fs = require("fs");
-const { ScopeFileSystemProvider } = require("./scopeFileSystemProvider");
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -14,74 +13,187 @@ const { ScopeFileSystemProvider } = require("./scopeFileSystemProvider");
 function activate(context) {
   console.log("Project Scopes extension activated");
 
-  // Check if workspace is available
-  if (
-    !vscode.workspace.workspaceFolders ||
-    vscode.workspace.workspaceFolders.length === 0
-  ) {
-    console.log(
-      "No workspace folders found - Project Scopes will be available when a workspace is opened"
+  try {
+    // Initialize scope manager
+    console.log("Initializing ScopeManager...");
+    const scopeManager = new ScopeManager(context);
+
+    // Initialize tree data provider
+    console.log("Registering projectScopes TreeDataProvider...");
+    const treeDataProvider = new ScopeTreeDataProvider(scopeManager);
+    const treeDisposable = vscode.window.registerTreeDataProvider(
+      "projectScopes",
+      treeDataProvider
     );
-    return;
+    context.subscriptions.push(treeDisposable);
+
+    // Initialize scoped file explorer
+    console.log("Registering scopedFileExplorer TreeDataProvider...");
+    const fileExplorerProvider = new FileExplorerTreeDataProvider(scopeManager);
+    const fileExplorerDisposable = vscode.window.registerTreeDataProvider(
+      "scopedFileExplorer",
+      fileExplorerProvider
+    );
+    context.subscriptions.push(fileExplorerDisposable);
+
+    // Register commands
+    console.log("Registering commands...");
+
+    // Register each command individually and add to subscriptions
+    context.subscriptions.push(
+      vscode.commands.registerCommand(
+        "project-scopes.createScope",
+        async () => {
+          console.log("createScope command called");
+          try {
+            await scopeManager.createScope();
+            treeDataProvider.refresh();
+          } catch (error) {
+            console.error("Error in createScope:", error);
+            vscode.window.showErrorMessage(
+              `Error creating scope: ${error.message}`
+            );
+          }
+        }
+      )
+    );
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand(
+        "project-scopes.editScope",
+        async (item) => {
+          console.log("editScope command called", item);
+          try {
+            const scopeName = item
+              ? item.label.replace(/^[●○] /, "")
+              : undefined;
+            await scopeManager.editScope(scopeName);
+            treeDataProvider.refresh();
+          } catch (error) {
+            console.error("Error in editScope:", error);
+            vscode.window.showErrorMessage(
+              `Error editing scope: ${error.message}`
+            );
+          }
+        }
+      )
+    );
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand(
+        "project-scopes.deleteScope",
+        async (item) => {
+          console.log("deleteScope command called", item);
+          try {
+            const scopeName = item
+              ? item.label.replace(/^[●○] /, "")
+              : undefined;
+            await scopeManager.deleteScope(scopeName);
+            treeDataProvider.refresh();
+          } catch (error) {
+            console.error("Error in deleteScope:", error);
+            vscode.window.showErrorMessage(
+              `Error deleting scope: ${error.message}`
+            );
+          }
+        }
+      )
+    );
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand(
+        "project-scopes.switchScope",
+        async () => {
+          console.log("switchScope command called");
+          try {
+            await scopeManager.switchScope();
+            treeDataProvider.refresh();
+          } catch (error) {
+            console.error("Error in switchScope:", error);
+            vscode.window.showErrorMessage(
+              `Error switching scope: ${error.message}`
+            );
+          }
+        }
+      )
+    );
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand("project-scopes.clearScope", async () => {
+        console.log("clearScope command called");
+        try {
+          await scopeManager.clearActiveScope();
+          treeDataProvider.refresh();
+        } catch (error) {
+          console.error("Error in clearScope:", error);
+          vscode.window.showErrorMessage(
+            `Error clearing scope: ${error.message}`
+          );
+        }
+      })
+    );
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand("project-scopes.refreshScopes", () => {
+        console.log("refreshScopes command called");
+        try {
+          treeDataProvider.refresh();
+          fileExplorerProvider.refresh();
+        } catch (error) {
+          console.error("Error in refreshScopes:", error);
+          vscode.window.showErrorMessage(
+            `Error refreshing scopes: ${error.message}`
+          );
+        }
+      })
+    );
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand("project-scopes.debugScope", () => {
+        console.log("debugScope command called");
+        try {
+          scopeManager.debugCurrentScope();
+        } catch (error) {
+          console.error("Error in debugScope:", error);
+          vscode.window.showErrorMessage(
+            `Error debugging scope: ${error.message}`
+          );
+        }
+      })
+    );
+
+    // Connect tree data provider to scope manager events
+    scopeManager.onScopeChanged(() => {
+      treeDataProvider.refresh();
+      fileExplorerProvider.refresh();
+    });
+
+    console.log("Project Scopes extension setup complete!");
+
+    // Show activation message
+    if (
+      !vscode.workspace.workspaceFolders ||
+      vscode.workspace.workspaceFolders.length === 0
+    ) {
+      console.log("No workspace folders found - some features will be limited");
+      vscode.window.showInformationMessage(
+        "Project Scopes extension is ready! Open a workspace to use all features."
+      );
+    } else {
+      console.log(
+        "Workspace folders found:",
+        vscode.workspace.workspaceFolders.length
+      );
+      vscode.window.showInformationMessage(
+        "Project Scopes extension is ready!"
+      );
+    }
+  } catch (error) {
+    console.error("Error during extension activation:", error);
+    vscode.window.showErrorMessage(
+      `Project Scopes extension failed to activate: ${error.message}`
+    );
   }
-
-  // Initialize scope manager
-  console.log("Initializing ScopeManager...");
-  const scopeManager = new ScopeManager(context);
-
-  // Initialize tree data provider
-  console.log("Registering projectScopes TreeDataProvider...");
-  const treeDataProvider = new ScopeTreeDataProvider(scopeManager);
-  vscode.window.registerTreeDataProvider("projectScopes", treeDataProvider);
-
-  // Initialize scoped file explorer
-  console.log("Registering scopedFileExplorer TreeDataProvider...");
-  const fileExplorerProvider = new FileExplorerTreeDataProvider(scopeManager);
-  vscode.window.registerTreeDataProvider(
-    "scopedFileExplorer",
-    fileExplorerProvider
-  );
-
-  // Register commands
-  console.log("Registering commands...");
-  const commands = [
-    vscode.commands.registerCommand("project-scopes.createScope", () => {
-      console.log("createScope command called");
-      return scopeManager.createScope();
-    }),
-    vscode.commands.registerCommand("project-scopes.editScope", (item) => {
-      console.log("editScope command called", item);
-      const scopeName = item ? item.label.replace(/^[●○] /, "") : undefined;
-      return scopeManager.editScope(scopeName);
-    }),
-    vscode.commands.registerCommand("project-scopes.deleteScope", (item) => {
-      console.log("deleteScope command called", item);
-      const scopeName = item ? item.label.replace(/^[●○] /, "") : undefined;
-      return scopeManager.deleteScope(scopeName);
-    }),
-    vscode.commands.registerCommand("project-scopes.switchScope", () => {
-      console.log("switchScope command called");
-      return scopeManager.switchScope();
-    }),
-    vscode.commands.registerCommand("project-scopes.clearScope", () => {
-      console.log("clearScope command called");
-      return scopeManager.clearActiveScope();
-    }),
-    vscode.commands.registerCommand("project-scopes.refreshScopes", () => {
-      console.log("refreshScopes command called");
-      return treeDataProvider.refresh();
-    }),
-    vscode.commands.registerCommand("project-scopes.debugScope", () => {
-      console.log("debugScope command called");
-      return scopeManager.debugCurrentScope();
-    }),
-  ];
-
-  // Add all commands to subscriptions
-  commands.forEach((command) => context.subscriptions.push(command));
-
-  console.log("Project Scopes extension setup complete!");
-  vscode.window.showInformationMessage("Project Scopes extension is ready!");
 }
 
 // This method is called when your extension is deactivated
@@ -106,54 +218,77 @@ class ScopeManager {
     this._onScopeChanged = new vscode.EventEmitter();
     this.onScopeChanged = this._onScopeChanged.event;
 
-    console.log("Loading scopes...");
+    // Initialize
     this.loadScopes();
-    console.log("Creating status bar item...");
     this.createStatusBarItem();
     console.log("ScopeManager initialization complete");
   }
 
   createStatusBarItem() {
-    this.statusBarItem = vscode.window.createStatusBarItem(
-      vscode.StatusBarAlignment.Left,
-      100
-    );
-    this.statusBarItem.command = "project-scopes.switchScope";
-    this.updateStatusBar();
-    this.statusBarItem.show();
-    this.context.subscriptions.push(this.statusBarItem);
+    try {
+      this.statusBarItem = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Left,
+        100
+      );
+      this.statusBarItem.command = "project-scopes.switchScope";
+      this.updateStatusBar();
+      this.statusBarItem.show();
+      this.context.subscriptions.push(this.statusBarItem);
+    } catch (error) {
+      console.error("Error creating status bar item:", error);
+    }
   }
 
   loadScopes() {
-    const config = vscode.workspace.getConfiguration("projectScopes");
-    this.scopes = config.get("scopes", {});
-    this.activeScope = config.get("activeScope", null);
-    this.updateStatusBar();
+    try {
+      const config = vscode.workspace.getConfiguration("projectScopes");
+      this.scopes = config.get("scopes", {});
+      this.activeScope = config.get("activeScope", null);
+      this.updateStatusBar();
+      console.log("Loaded scopes:", Object.keys(this.scopes));
+      console.log("Active scope:", this.activeScope);
+    } catch (error) {
+      console.error("Error loading scopes:", error);
+      this.scopes = {};
+      this.activeScope = null;
+    }
   }
 
   async saveScopes() {
-    const config = vscode.workspace.getConfiguration("projectScopes");
-    await config.update(
-      "scopes",
-      this.scopes,
-      vscode.ConfigurationTarget.Workspace
-    );
-    await config.update(
-      "activeScope",
-      this.activeScope,
-      vscode.ConfigurationTarget.Workspace
-    );
+    try {
+      const config = vscode.workspace.getConfiguration("projectScopes");
+      await config.update(
+        "scopes",
+        this.scopes,
+        vscode.ConfigurationTarget.Workspace
+      );
+      await config.update(
+        "activeScope",
+        this.activeScope,
+        vscode.ConfigurationTarget.Workspace
+      );
+      console.log("Scopes saved successfully");
+    } catch (error) {
+      console.error("Error saving scopes:", error);
+      throw error;
+    }
   }
 
   updateStatusBar() {
-    if (this.activeScope && this.scopes[this.activeScope]) {
-      this.statusBarItem.text = `$(folder) ${this.activeScope}`;
-      this.statusBarItem.tooltip = `Active scope: ${
-        this.activeScope
-      }\nFolders: ${this.scopes[this.activeScope].folders.join(", ")}`;
-    } else {
-      this.statusBarItem.text = "$(folder) No Scope";
-      this.statusBarItem.tooltip = "No active scope - showing all folders";
+    if (!this.statusBarItem) return;
+
+    try {
+      if (this.activeScope && this.scopes[this.activeScope]) {
+        this.statusBarItem.text = `$(folder) ${this.activeScope}`;
+        this.statusBarItem.tooltip = `Active scope: ${
+          this.activeScope
+        }\nFolders: ${this.scopes[this.activeScope].folders.join(", ")}`;
+      } else {
+        this.statusBarItem.text = "$(folder) No Scope";
+        this.statusBarItem.tooltip = "No active scope - showing all folders";
+      }
+    } catch (error) {
+      console.error("Error updating status bar:", error);
     }
   }
 
@@ -180,6 +315,7 @@ class ScopeManager {
     };
 
     await this.saveScopes();
+    this._onScopeChanged.fire();
     vscode.window.showInformationMessage(
       `Scope "${scopeName}" created successfully!`
     );
@@ -473,6 +609,7 @@ class ScopeManager {
       }
     } catch (error) {
       // Ignore errors (permission issues, etc.)
+      console.warn("Error reading directory:", dirPath, error.message);
     }
 
     return folders;
@@ -490,12 +627,18 @@ class ScopeManager {
     console.log("=== DEBUG SCOPE INFO ===");
     console.log("Active scope:", this.activeScope);
     console.log("All scopes:", this.scopes);
+    console.log("Status bar text:", this.statusBarItem?.text);
     console.log("=== END DEBUG ===");
+
+    vscode.window.showInformationMessage(
+      `Debug info logged to console. Active: ${this.activeScope || "None"}`
+    );
   }
 }
 
 class ScopeTreeDataProvider {
   constructor(scopeManager) {
+    console.log("ScopeTreeDataProvider constructor called");
     this.scopeManager = scopeManager;
     this._onDidChangeTreeData = new vscode.EventEmitter();
     this.onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -503,82 +646,128 @@ class ScopeTreeDataProvider {
     // Listen for configuration changes
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("projectScopes")) {
+        console.log("Configuration changed, refreshing tree data");
+        this.scopeManager.loadScopes();
         this.refresh();
       }
     });
   }
 
   refresh() {
+    console.log("ScopeTreeDataProvider refresh called");
     this._onDidChangeTreeData.fire();
   }
 
   getTreeItem(element) {
+    console.log("getTreeItem called with:", element);
     return element;
   }
 
   getChildren(element) {
-    if (!element) {
-      // Root level - return all scopes
-      const scopes = this.scopeManager.getScopes();
-      const activeScope = this.scopeManager.getActiveScope();
+    console.log("getChildren called with:", element);
 
-      return Object.keys(scopes).map((scopeName) => {
-        const scope = scopes[scopeName];
-        const isActive = scopeName === activeScope;
+    try {
+      if (!element) {
+        // Root level - return all scopes
+        const scopes = this.scopeManager.getScopes();
+        const activeScope = this.scopeManager.getActiveScope();
 
-        const item = new vscode.TreeItem(
-          `${isActive ? "● " : "○ "}${scopeName}`,
-          vscode.TreeItemCollapsibleState.Collapsed
+        console.log(
+          "Root level - scopes:",
+          Object.keys(scopes),
+          "active:",
+          activeScope
         );
 
-        item.contextValue = "scope";
-        item.description =
-          scope.description || `${scope.folders.length} folders`;
-        item.tooltip = `${scope.folders.join(", ")}\n${
-          isActive ? "(Active)" : "(Inactive)"
-        }`;
-        item.iconPath = new vscode.ThemeIcon(
-          isActive ? "folder-active" : "folder"
-        );
-
-        return item;
-      });
-    } else {
-      // Show folders for this scope
-      const scopeName = element.label.replace(/^[●○] /, "");
-      const scopes = this.scopeManager.getScopes();
-      const scope = scopes[scopeName];
-
-      if (scope) {
-        return scope.folders.map((folder) => {
+        if (Object.keys(scopes).length === 0) {
+          // Return a placeholder item when no scopes exist
           const item = new vscode.TreeItem(
-            folder,
+            "No scopes defined",
             vscode.TreeItemCollapsibleState.None
           );
-          item.contextValue = "folder";
-          item.iconPath = new vscode.ThemeIcon("folder");
+          item.description = "Create a scope to get started";
+          item.iconPath = new vscode.ThemeIcon("info");
+          return [item];
+        }
+
+        return Object.keys(scopes).map((scopeName) => {
+          const scope = scopes[scopeName];
+          const isActive = scopeName === activeScope;
+
+          const item = new vscode.TreeItem(
+            `${isActive ? "● " : "○ "}${scopeName}`,
+            vscode.TreeItemCollapsibleState.Collapsed
+          );
+
+          item.contextValue = "scope";
+          item.description =
+            scope.description || `${scope.folders.length} folders`;
+          item.tooltip = `${scope.folders.join(", ")}\n${
+            isActive ? "(Active)" : "(Inactive)"
+          }`;
+          item.iconPath = new vscode.ThemeIcon(
+            isActive ? "folder-active" : "folder"
+          );
+
           return item;
         });
-      }
+      } else {
+        // Show folders for this scope
+        const scopeName = element.label.replace(/^[●○] /, "");
+        const scopes = this.scopeManager.getScopes();
+        const scope = scopes[scopeName];
 
-      return [];
+        console.log(
+          "Showing folders for scope:",
+          scopeName,
+          "scope data:",
+          scope
+        );
+
+        if (scope && scope.folders) {
+          return scope.folders.map((folder) => {
+            const item = new vscode.TreeItem(
+              folder,
+              vscode.TreeItemCollapsibleState.None
+            );
+            item.contextValue = "folder";
+            item.iconPath = new vscode.ThemeIcon("folder");
+            item.tooltip = `Folder: ${folder}`;
+            return item;
+          });
+        }
+
+        return [];
+      }
+    } catch (error) {
+      console.error("Error in getChildren:", error);
+      const errorItem = new vscode.TreeItem(
+        "Error loading data",
+        vscode.TreeItemCollapsibleState.None
+      );
+      errorItem.description = error.message;
+      errorItem.iconPath = new vscode.ThemeIcon("error");
+      return [errorItem];
     }
   }
 }
 
 class FileExplorerTreeDataProvider {
   constructor(scopeManager) {
+    console.log("FileExplorerTreeDataProvider constructor called");
     this.scopeManager = scopeManager;
     this._onDidChangeTreeData = new vscode.EventEmitter();
     this.onDidChangeTreeData = this._onDidChangeTreeData.event;
 
     // Listen for scope changes
     this.scopeManager.onScopeChanged(() => {
+      console.log("Scope changed, refreshing file explorer");
       this.refresh();
     });
   }
 
   refresh() {
+    console.log("FileExplorerTreeDataProvider refresh called");
     this._onDidChangeTreeData.fire();
   }
 
@@ -610,50 +799,75 @@ class FileExplorerTreeDataProvider {
   }
 
   async getChildren(element) {
-    const activeScope = this.scopeManager.getActiveScope();
-    const scopes = this.scopeManager.getScopes();
+    try {
+      const activeScope = this.scopeManager.getActiveScope();
+      const scopes = this.scopeManager.getScopes();
 
-    // If no active scope, return empty (or could return all files)
-    if (!activeScope || !scopes[activeScope]) {
-      return [];
-    }
+      console.log(
+        "FileExplorer getChildren - activeScope:",
+        activeScope,
+        "element:",
+        element?.name
+      );
 
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      return [];
-    }
-
-    if (!element) {
-      // Root level - return scoped folders
-      const scopeFolders = scopes[activeScope].folders;
-      const rootItems = [];
-
-      for (const scopeFolder of scopeFolders) {
-        for (const workspaceFolder of workspaceFolders) {
-          const scopePath = path.resolve(
-            workspaceFolder.uri.fsPath,
-            scopeFolder
+      // If no active scope, show message
+      if (!activeScope || !scopes[activeScope]) {
+        if (!element) {
+          const item = new vscode.TreeItem(
+            "No active scope",
+            vscode.TreeItemCollapsibleState.None
           );
-          try {
-            const stat = await fs.promises.stat(scopePath);
-            if (stat.isDirectory()) {
-              const uri = vscode.Uri.file(scopePath);
-              rootItems.push({
-                name: path.basename(scopeFolder),
-                uri: uri,
-                type: vscode.FileType.Directory,
-              });
-            }
-          } catch (error) {
-            // Scope folder doesn't exist, skip it
-          }
+          item.description = "Select a scope to view files";
+          item.iconPath = new vscode.ThemeIcon("info");
+          return [item];
         }
+        return [];
       }
 
-      return rootItems;
-    } else {
-      // Get children of the given directory
-      try {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        if (!element) {
+          const item = new vscode.TreeItem(
+            "No workspace",
+            vscode.TreeItemCollapsibleState.None
+          );
+          item.description = "Open a workspace to view files";
+          item.iconPath = new vscode.ThemeIcon("warning");
+          return [item];
+        }
+        return [];
+      }
+
+      if (!element) {
+        // Root level - return scoped folders
+        const scopeFolders = scopes[activeScope].folders;
+        const rootItems = [];
+
+        for (const scopeFolder of scopeFolders) {
+          for (const workspaceFolder of workspaceFolders) {
+            const scopePath = path.resolve(
+              workspaceFolder.uri.fsPath,
+              scopeFolder
+            );
+            try {
+              const stat = await fs.promises.stat(scopePath);
+              if (stat.isDirectory()) {
+                const uri = vscode.Uri.file(scopePath);
+                rootItems.push({
+                  name: scopeFolder,
+                  uri: uri,
+                  type: vscode.FileType.Directory,
+                });
+              }
+            } catch (error) {
+              console.warn("Scope folder doesn't exist:", scopePath);
+            }
+          }
+        }
+
+        return rootItems;
+      } else {
+        // Get children of the given directory
         const entries = await fs.promises.readdir(element.uri.fsPath, {
           withFileTypes: true,
         });
@@ -687,10 +901,16 @@ class FileExplorerTreeDataProvider {
         });
 
         return children;
-      } catch (error) {
-        console.error("Error reading directory:", error);
-        return [];
       }
+    } catch (error) {
+      console.error("Error in FileExplorer getChildren:", error);
+      const errorItem = new vscode.TreeItem(
+        "Error loading files",
+        vscode.TreeItemCollapsibleState.None
+      );
+      errorItem.description = error.message;
+      errorItem.iconPath = new vscode.ThemeIcon("error");
+      return [errorItem];
     }
   }
 }
