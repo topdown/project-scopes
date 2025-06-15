@@ -1,0 +1,140 @@
+{
+  "name": "project-scopes",
+  "displayName": "Project Scopes",
+  "description": "Project scopes is a filter to focus on specific sections (directories) within your project",
+  "version": "0.0.1",
+  "publisher": "yourname",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/topdown/project-scopes"
+  },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "project-scopes.createScope",
+        "title": "Create New Scope",
+        "icon": "$(add)"
+      },
+      {
+        "command": "project-scopes.editScope",
+        "title": "Edit Scope",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "project-scopes.deleteScope",
+        "title": "Delete Scope",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "project-scopes.switchScope",
+        "title": "Switch Scope",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "project-scopes.clearScope",
+        "title": "Clear Active Scope",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "project-scopes.refreshScopes",
+        "title": "Refresh Scopes",
+        "icon": "$(refresh)"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "projectScopes",
+          "name": "Project Scopes",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "project-scopes.createScope",
+          "when": "view == projectScopes",
+          "group": "navigation@1"
+        },
+        {
+          "command": "project-scopes.clearScope",
+          "when": "view == projectScopes",
+          "group": "navigation@2"
+        },
+        {
+          "command": "project-scopes.refreshScopes",
+          "when": "view == projectScopes",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "project-scopes.editScope",
+          "when": "view == projectScopes && viewItem == scope",
+          "group": "inline@1"
+        },
+        {
+          "command": "project-scopes.deleteScope",
+          "when": "view == projectScopes && viewItem == scope",
+          "group": "inline@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "project-scopes.createScope",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "project-scopes.switchScope",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "project-scopes.clearScope",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Project Scopes",
+      "properties": {
+        "projectScopes.scopes": {
+          "type": "object",
+          "default": { },
+          "description": "Defined project scopes with their folder inclusions"
+        },
+        "projectScopes.activeScope": {
+          "type": "string",
+          "default": "",
+          "description": "Currently active scope"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "npm run compile",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.96.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^18.x",
+    "eslint": "^9.25.1",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}
